@@ -1,0 +1,59 @@
+# =========================
+# 🔧 SISTEMA / GENERAL
+# =========================
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.swp
+
+# =========================
+# 📦 NODE / JS
+# =========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =========================
+# 🔐 VARIABLES DE ENTORNO
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# ⚛️ FRONTEND (cliente)
+# =========================
+cliente/node_modules/
+cliente/dist/
+cliente/build/
+cliente/.vite/
+cliente/.cache/
+
+# Vite
+cliente/vite.svg
+
+# =========================
+# 🧪 TEST / COVERAGE
+# =========================
+coverage/
+*.lcov
+
+# =========================
+# 🛠️ EDITORES
+# =========================
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# =========================
+# 🚀 BUILD / PRODUCCIÓN
+# =========================
+dist/
+build/
+out/
