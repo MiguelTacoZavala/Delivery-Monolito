@@ -5,16 +5,15 @@ import { supabase } from '../lib/supabase';
 import { Distrito } from '../types';
 
 export default function Register() {
-  const [fullName, setFullName] = useState('');
-  const [lastName, setLastName] = useState('');
+  const [nombreCompleto, setNombreCompleto] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
+  const [telefono, setTelefono] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   
   const [provincia, setProvincia] = useState('');
-  const [distrito, setDistrito] = useState('');
-  const [address, setAddress] = useState('');
+  const [distritoId, setDistritoId] = useState<number | ''>('');
+  const [direccion, setDireccion] = useState('');
   
   const [distritos, setDistritos] = useState<Distrito[]>([]);
   const [loading, setLoading] = useState(false);
@@ -25,15 +24,14 @@ export default function Register() {
 
   useEffect(() => {
     const fetchDistritos = async () => {
-      const { data } = await supabase.from('distritos').select('*').order('name');
+      const { data } = await supabase.from('distritos').select('*').order('nombre');
       if (data) setDistritos(data);
     };
     fetchDistritos();
   }, []);
 
-  const provincias = [...new Set(distritos.map(d => d.province))];
   const distritosFiltrados = provincia 
-    ? distritos.filter(d => d.province === provincia).map(d => d.name)
+    ? distritos.filter(d => d.provincia === provincia)
     : [];
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -45,31 +43,20 @@ export default function Register() {
       return;
     }
     
-    if (!provincia) {
-      setError('Selecciona una provincia');
-      return;
-    }
-    
-    if (!distrito) {
+    if (!distritoId) {
       setError('Selecciona un distrito');
-      return;
-    }
-
-    const selectedDistrito = distritos.find(d => d.name === distrito && d.province === provincia);
-    if (!selectedDistrito) {
-      setError('Selecciona un distrito válido');
       return;
     }
 
     setLoading(true);
     try {
       await register({
-        full_name: `${fullName} ${lastName}`.trim(),
+        nombre_completo: nombreCompleto,
         email,
-        phone,
+        telefono,
         password,
-        address,
-        distrito_id: selectedDistrito.id,
+        direccion,
+        distrito_id: Number(distritoId),
       });
       navigate('/catalogo');
     } catch (err) {
@@ -106,31 +93,17 @@ export default function Register() {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Nombres
-                  </label>
-                  <input
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Apellidos
-                  </label>
-                  <input
-                    type="text"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    required
-                  />
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Nombre completo
+                </label>
+                <input
+                  type="text"
+                  value={nombreCompleto}
+                  onChange={(e) => setNombreCompleto(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  required
+                />
               </div>
 
               <div>
@@ -152,8 +125,8 @@ export default function Register() {
                 </label>
                 <input
                   type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  value={telefono}
+                  onChange={(e) => setTelefono(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                   required
                 />
@@ -190,9 +163,6 @@ export default function Register() {
               <h2 className="text-lg font-semibold text-slate-800 mb-4">
                 Dirección de entrega
               </h2>
-              <p className="text-sm text-slate-600 mb-4">
-                Vinculada a tu región para asignar el delivery correcto.
-              </p>
 
               <div className="space-y-4">
                 <div>
@@ -203,12 +173,12 @@ export default function Register() {
                     value={provincia}
                     onChange={(e) => {
                       setProvincia(e.target.value);
-                      setDistrito('');
+                      setDistritoId('');
                     }}
                     className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                   >
                     <option value="">Seleccionar</option>
-                    {provincias.map(p => (
+                    {[...new Set(distritos.map(d => d.provincia))].map(p => (
                       <option key={p} value={p}>{p}</option>
                     ))}
                   </select>
@@ -219,14 +189,14 @@ export default function Register() {
                     Distrito
                   </label>
                   <select
-                    value={distrito}
-                    onChange={(e) => setDistrito(e.target.value)}
+                    value={distritoId}
+                    onChange={(e) => setDistritoId(Number(e.target.value))}
                     disabled={!provincia}
                     className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:bg-slate-100"
                   >
                     <option value="">Seleccionar</option>
                     {distritosFiltrados.map(d => (
-                      <option key={d} value={d}>{d}</option>
+                      <option key={d.id} value={d.id}>{d.nombre}</option>
                     ))}
                   </select>
                 </div>
@@ -237,8 +207,8 @@ export default function Register() {
                   </label>
                   <input
                     type="text"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
+                    value={direccion}
+                    onChange={(e) => setDireccion(e.target.value)}
                     placeholder=" calle, número, edificio..."
                     className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                     required

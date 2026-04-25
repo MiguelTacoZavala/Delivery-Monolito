@@ -1,10 +1,10 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, UserRole } from '../types';
+import { Usuario, Direccion, UserRole } from '../types';
 import { supabase } from '../lib/supabase';
 import { Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
-  user: User | null;
+  user: Usuario | null;
   session: Session | null;
   role: UserRole | null;
   loading: boolean;
@@ -14,21 +14,27 @@ interface AuthContextType {
 }
 
 interface RegisterData {
-  full_name: string;
+  nombre_completo: string;
   email: string;
-  phone: string;
+  telefono: string;
   password: string;
-  address: string;
-  distrito_id: number;
+  direccion?: string;
+  distrito_id?: number;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+interface AuthContextValue extends AuthContextType {
+  direcciones: Direccion[];
+  setDirecciones: (dirs: Direccion[]) => void;
+}
+
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<Usuario | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
+  const [direcciones, setDirecciones] = useState<Direccion[]>([]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -57,37 +63,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchUserProfile = async (userId: string) => {
     setLoading(true);
     
-    const { data: userData } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .limit(1);
+    try {
+      const { data: usuario } = await supabase
+        .from('usuarios')
+        .select('*')
+        .eq('id', userId)
+        .limit(1);
 
-    const { data: adminData } = await supabase
-      .from('admins')
-      .select('*')
-      .eq('auth_id', userId)
-      .limit(1);
-
-    if (userData && userData.length > 0) {
-      setUser(userData[0]);
-      const savedRole = localStorage.getItem('userRole');
-      setRole(savedRole as UserRole || 'cliente');
-    } else if (adminData && adminData.length > 0) {
-      const admin = adminData[0];
-      const adminUser: User = {
-        id: String(admin.id),
-        full_name: admin.full_name,
-        email: admin.email,
-        phone: '',
-        address: null,
-        distrito_id: null,
-      };
-      setUser(adminUser);
-      setRole('admin');
-    } else {
-      setUser(null);
+      if (usuario && usuario.length > 0) {
+        setUser(usuario[0]);
+        const rolFromDb = usuario[0].rol as UserRole;
+        const savedRole = localStorage.getItem('userRole') as UserRole;
+        const finalRole = savedRole || rolFromDb;
+        setRole(finalRole);
+        
+        // Fetch direcciones
+        const { data: dirs } = await supabase
+          .from('direcciones')
+          .select('*')
+          .eq('usuario_id', userId);
+        if (dirs) setDirecciones(dirs);
+      } else {
+        // Si no encuentra en usuarios pero hay sesión, verificar localStorage
+        const savedRole = localStorage.getItem('userRole') as UserRole;
+        if (savedRole) {
+          // Usuario existe en auth pero no en tabla usuarios (posible caso edge)
+          // Crear usuario básico temporal
+          setRole(savedRole);
+          const tempUser: Usuario = {
+            id: userId,
+            nombre_completo: null,
+            telefono: null,
+            rol: savedRole
+          };
+          setUser(tempUser);
+        } else {
+          setUser(null);
+          setRole(null);
+        }
+      }
+    } catch (error) {
+      // En caso de error, intentar recuperar de localStorage
+      const savedRole = localStorage.getItem('userRole') as UserRole;
+      if (savedRole) {
+        setRole(savedRole);
+      }
     }
+    
     setLoading(false);
   };
 
@@ -104,44 +126,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (data?.session) {
         setSession(data.session);
         
-        if (userRole === 'admin') {
-          const { data: adminData } = await supabase
-            .from('admins')
-            .select('*')
-            .eq('auth_id', data.session.user.id)
-            .limit(1);
+        const { data: usuario } = await supabase
+          .from('usuarios')
+          .select('*')
+          .eq('id', data.session.user.id)
+          .limit(1);
 
-          if (adminData && adminData.length > 0) {
-            const admin = adminData[0];
-            const adminUser: User = {
-              id: String(admin.id),
-              full_name: admin.full_name,
-              email: admin.email,
-              phone: '',
-              address: null,
-              distrito_id: null,
-            };
-            setUser(adminUser);
-            setRole('admin');
-            localStorage.setItem('userRole', 'admin');
-          } else {
+        if (usuario && usuario.length > 0) {
+          const u = usuario[0];
+          
+          if (userRole === 'admin' && u.rol !== 'admin') {
             await supabase.auth.signOut();
             throw new Error('No tienes acceso de administrador');
           }
-        } else {
-          const { data: profile } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', data.session.user.id)
-            .limit(1);
 
-          if (profile && profile.length > 0) {
-            setUser(profile[0]);
-            setRole('cliente');
-            localStorage.setItem('userRole', 'cliente');
-          } else {
-            throw new Error('Perfil no encontrado');
-          }
+          setUser(u);
+          setRole(u.rol as UserRole);
+          localStorage.setItem('userRole', u.rol);
+
+          // Fetch direcciones
+          const { data: dirs } = await supabase
+            .from('direcciones')
+            .select('*')
+            .eq('usuario_id', data.session.user.id);
+          if (dirs) setDirecciones(dirs);
+        } else {
+          throw new Error('Perfil no encontrado');
         }
       }
     } finally {
@@ -154,6 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setSession(null);
     setRole(null);
+    setDirecciones([]);
     localStorage.removeItem('userRole');
   };
 
@@ -163,11 +174,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
-        options: {
-          data: {
-            full_name: data.full_name,
-          }
-        }
       });
 
       if (authError) throw authError;
@@ -176,27 +182,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error('Error al crear usuario');
       }
 
-      const { error: profileError } = await supabase
-        .from('users')
-        .insert({
-          id: authData.user.id,
-          full_name: data.full_name,
-          email: data.email,
-          phone: data.phone,
-          address: data.address,
-          distrito_id: data.distrito_id,
-        });
+      // El trigger ya crea el registro en usuarios automáticamente
+      // Actualizar datos del usuario
+      const { error: updateError } = await supabase
+        .from('usuarios')
+        .update({
+          nombre_completo: data.nombre_completo,
+          telefono: data.telefono,
+        })
+        .eq('id', authData.user.id);
 
-      if (profileError) throw profileError;
+      if (updateError) throw updateError;
 
-      const { data: newUser } = await supabase
-        .from('users')
+      // Crear dirección inicial si se proporcionó
+      if (data.direccion && data.distrito_id) {
+        const { error: dirError } = await supabase
+          .from('direcciones')
+          .insert({
+            usuario_id: authData.user.id,
+            direccion: data.direccion,
+            distrito_id: data.distrito_id,
+          });
+
+        if (dirError) throw dirError;
+      }
+
+      // Fetch user completo
+      const { data: nuevoUsuario } = await supabase
+        .from('usuarios')
         .select('*')
         .eq('id', authData.user.id)
         .limit(1);
 
-      if (newUser && newUser.length > 0) {
-        setUser(newUser[0]);
+      if (nuevoUsuario && nuevoUsuario.length > 0) {
+        setUser(nuevoUsuario[0]);
         setRole('cliente');
         localStorage.setItem('userRole', 'cliente');
       }
@@ -206,7 +225,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, role, loading, login, logout, register }}>
+    <AuthContext.Provider value={{ user, session, role, loading, login, logout, register, direcciones, setDirecciones }}>
       {children}
     </AuthContext.Provider>
   );

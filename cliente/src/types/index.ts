@@ -1,61 +1,52 @@
 export interface Distrito {
   id: number;
-  name: string;
-  province: string;
+  nombre: string;
+  provincia: string;
 }
 
-export interface Admin {
-  id: number;
-  full_name: string;
-  email: string;
-  auth_id: string;
-}
-
-export interface User {
+export interface Usuario {
   id: string;
-  full_name: string;
-  email: string;
-  phone: string;
-  address: string | null;
-  distrito_id: number | null;
+  nombre_completo: string | null;
+  telefono: string | null;
+  rol: 'cliente' | 'admin';
 }
 
+export interface Direccion {
+  id: number;
+  usuario_id: string;
+  distrito_id: number | null;
+  direccion: string;
+}
+
+export interface Pedido {
+  id: number;
+  usuario_id: string;
+  direccion_id: number | null;
+  total: number;
+  estado: 'pendiente' | 'preparando' | 'enviado' | 'entregado' | 'cancelado';
+  creado_en: string;
+}
+
+export interface DetallePedido {
+  id: number;
+  pedido_id: number;
+  producto_id: number;
+  nombre_producto: string;
+  precio: number;
+  cantidad: number;
+  subtotal: number;
+}
+
+// Producto del sistema de inventario externo
 export interface Product {
   id: number;
-  sku: string;
-  name: string;
-  description: string | null;
-  photo_url: string | null;
-  price: number;
-  stock: number;
-  category: string | null;
-  created_by: number | null;
-}
-
-export type OrderStatus = 'pending' | 'preparing' | 'shipped' | 'delivered' | 'cancelled';
-
-export interface Order {
-  id: number;
-  order_number: string;
-  user_id: string;
-  delivery_address: string;
-  distrito_id: number;
-  status: OrderStatus;
-  total_amount: number;
-  created_at: string;
-}
-
-export interface OrderItem {
-  id: number;
-  order_id: number;
-  product_id: number;
-  quantity: number;
-  unit_price: number;
-  subtotal: number;
-  product?: {
-    name: string;
-    photo_url: string | null;
-  };
+  nombre: string;
+  precio: number;
+  descripcion?: string;
+  foto_url?: string;
+  sku?: string;
+  categoria?: string;
+  stock?: number;
 }
 
 export interface CartItem {

@@ -2,22 +2,30 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Order, OrderItem, Distrito } from '../types';
+import { Pedido, DetallePedido, Distrito } from '../types';
 
-interface OrderWithItems extends Order {
-  items?: OrderItem[];
+interface PedidoWithDetails extends Pedido {
+  detalles?: DetallePedido[];
 }
 
 export default function Profile() {
-  const { user, role, logout } = useAuth();
+  const { user, role, logout, direcciones, setDirecciones, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [orders, setOrders] = useState<OrderWithItems[]>([]);
+  const [pedidos, setPedidos] = useState<PedidoWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
-  const [distrito, setDistrito] = useState<Distrito | null>(null);
-  const [activeTab, setActiveTab] = useState<'pedidos' | 'direccion'>('pedidos');
+  const [distritos, setDistritos] = useState<Distrito[]>([]);
+  const [activeTab, setActiveTab] = useState<'pedidos' | 'direcciones'>('pedidos');
+
+  // Nueva dirección
+  const [showNewAddress, setShowNewAddress] = useState(false);
+  const [newDireccion, setNewDireccion] = useState('');
+  const [newDistritoId, setNewDistritoId] = useState<number | ''>('');
+  const [savingAddress, setSavingAddress] = useState(false);
 
   useEffect(() => {
+    if (authLoading) return;
+    
     if (!user) {
       navigate('/login?role=cliente');
       return;
@@ -26,73 +34,92 @@ export default function Profile() {
     const fetchData = async () => {
       setLoading(true);
       
-      if (user.distrito_id) {
-        const { data: d } = await supabase
-          .from('distritos')
-          .select('*')
-          .eq('id', user.distrito_id)
-          .limit(1);
-        if (d && d.length > 0) setDistrito(d[0]);
-      }
+      const { data: d } = await supabase.from('distritos').select('*').order('nombre');
+      if (d) setDistritos(d);
       
-      const { data: o } = await supabase
-        .from('orders')
+      const { data: p } = await supabase
+        .from('pedidos')
         .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .eq('usuario_id', user.id)
+        .order('creado_en', { ascending: false });
       
-      if (o) {
-        const ordersWithItems = await Promise.all(o.map(async (order) => {
-          const { data: items } = await supabase
-            .from('order_items')
-            .select('*, product:products(name, photo_url)')
-            .eq('order_id', order.id);
-          return { ...order, items: items || [] };
+      if (p) {
+        const pedidosWithDetails = await Promise.all(p.map(async (pedido) => {
+          const { data: detalles } = await supabase
+            .from('detalle_pedidos')
+            .select('*')
+            .eq('pedido_id', pedido.id);
+          return { ...pedido, detalles: detalles || [] };
         }));
-        setOrders(ordersWithItems);
+        setPedidos(pedidosWithDetails);
       }
       setLoading(false);
     };
     
     fetchData();
-  }, [user, navigate]);
+  }, [user, navigate, authLoading]);
 
   const handleLogout = () => {
     logout();
     navigate('/');
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending':
+  const handleAddAddress = async () => {
+    if (!newDireccion || !newDistritoId) return;
+    setSavingAddress(true);
+    
+    const { error } = await supabase
+      .from('direcciones')
+      .insert({
+        usuario_id: user!.id,
+        direccion: newDireccion,
+        distrito_id: newDistritoId,
+      });
+    
+    if (!error) {
+      const { data } = await supabase
+        .from('direcciones')
+        .select('*')
+        .eq('usuario_id', user!.id);
+      if (data) setDirecciones(data);
+      setShowNewAddress(false);
+      setNewDireccion('');
+      setNewDistritoId('');
+    }
+    setSavingAddress(false);
+  };
+
+  const getStatusColor = (estado: string) => {
+    switch (estado) {
+      case 'pendiente':
         return 'bg-yellow-100 text-yellow-800';
-      case 'preparing':
+      case 'preparando':
         return 'bg-blue-100 text-blue-800';
-      case 'shipped':
+      case 'enviado':
         return 'bg-purple-100 text-purple-800';
-      case 'delivered':
+      case 'entregado':
         return 'bg-green-100 text-green-800';
-      case 'cancelled':
+      case 'cancelado':
         return 'bg-red-100 text-red-800';
       default:
         return 'bg-slate-100 text-slate-800';
     }
   };
 
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'pending':
+  const getStatusLabel = (estado: string) => {
+    switch (estado) {
+      case 'pendiente':
         return 'Pendiente';
-      case 'preparing':
+      case 'preparando':
         return 'Preparando';
-      case 'shipped':
+      case 'enviado':
         return 'En camino';
-      case 'delivered':
+      case 'entregado':
         return 'Entregado';
-      case 'cancelled':
+      case 'cancelado':
         return 'Cancelado';
       default:
-        return status;
+        return estado;
     }
   };
 
@@ -111,7 +138,7 @@ export default function Profile() {
     );
   }
 
-  const initials = user?.full_name
+  const initials = user?.nombre_completo
     ?.split(' ')
     .map(n => n[0])
     .join('')
@@ -160,8 +187,7 @@ export default function Profile() {
               {initials}
             </div>
             <div className="flex-1">
-              <h1 className="text-xl font-bold text-slate-800">{user?.full_name}</h1>
-              <p className="text-slate-600">{user?.email}</p>
+              <h1 className="text-xl font-bold text-slate-800">{user?.nombre_completo || 'Usuario'}</h1>
             </div>
           </div>
         </div>
@@ -179,48 +205,48 @@ export default function Profile() {
               Mis pedidos
             </button>
             <button
-              onClick={() => setActiveTab('direccion')}
+              onClick={() => setActiveTab('direcciones')}
               className={`flex-1 py-3 text-center font-medium transition-colors ${
-                activeTab === 'direccion'
+                activeTab === 'direcciones'
                   ? 'text-primary-600 border-b-2 border-primary-600'
                   : 'text-slate-600 hover:text-slate-800'
               }`}
             >
-              Dirección
+              Direcciones
             </button>
           </div>
 
           <div className="p-6">
             {activeTab === 'pedidos' ? (
-              orders.length === 0 ? (
+              pedidos.length === 0 ? (
                 <div className="text-center py-8">
                   <p className="text-slate-600 mb-4">No tienes pedidos aún</p>
                   <Link to="/catalogo" className="text-primary-600 hover:text-primary-700 font-medium">
-                    Pedir de nuevo →
+                    Hacer un pedido →
                   </Link>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {orders.map(order => (
-                    <div key={order.id} className="p-4 border border-slate-200 rounded-lg">
+                  {pedidos.map(pedido => (
+                    <div key={pedido.id} className="p-4 border border-slate-200 rounded-lg">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="font-semibold text-slate-800">{order.order_number}</span>
-                        <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(order.status)}`}>
-                          {getStatusLabel(order.status)}
+                        <span className="font-semibold text-slate-800">PED-{String(pedido.id).padStart(6, '0')}</span>
+                        <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(pedido.estado)}`}>
+                          {getStatusLabel(pedido.estado)}
                         </span>
                       </div>
-                      {order.items && order.items.length > 0 && (
+                      {pedido.detalles && pedido.detalles.length > 0 && (
                         <div className="mb-2">
-                          {order.items.map(item => (
-                            <div key={item.id} className="text-sm text-slate-600">
-                              {item.quantity}x {item.product?.name || 'Producto'}
+                          {pedido.detalles.map(det => (
+                            <div key={det.id} className="text-sm text-slate-600">
+                              {det.cantidad}x {det.nombre_producto}
                             </div>
                           ))}
                         </div>
                       )}
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-slate-600">{formatDate(order.created_at)}</span>
-                        <span className="font-semibold text-primary-600">S/ {order.total_amount.toFixed(2)}</span>
+                        <span className="text-slate-600">{formatDate(pedido.creado_en)}</span>
+                        <span className="font-semibold text-primary-600">S/ {pedido.total.toFixed(2)}</span>
                       </div>
                     </div>
                   ))}
@@ -228,20 +254,61 @@ export default function Profile() {
               )
             ) : (
               <div>
-                {user?.address ? (
-                  <div className="p-4 bg-slate-50 rounded-md">
-                    <p className="text-slate-800">{user.address}</p>
-                    {distrito && (
-                      <p className="text-sm text-slate-600 mt-1">
-                        {distrito.name} · {distrito.province}
-                      </p>
-                    )}
-                    <span className="inline-block mt-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                      Cobertura confirmada
-                    </span>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="font-semibold text-slate-800">Mis direcciones</h3>
+                  <button
+                    onClick={() => setShowNewAddress(!showNewAddress)}
+                    className="text-sm text-primary-600 hover:text-primary-700"
+                  >
+                    + Añadir dirección
+                  </button>
+                </div>
+
+                {showNewAddress && (
+                  <div className="mb-4 p-4 bg-slate-50 rounded-md">
+                    <input
+                      type="text"
+                      placeholder="Dirección"
+                      value={newDireccion}
+                      onChange={(e) => setNewDireccion(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-md mb-2"
+                    />
+                    <select
+                      value={newDistritoId}
+                      onChange={(e) => setNewDistritoId(Number(e.target.value))}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-md mb-2"
+                    >
+                      <option value="">Seleccionar distrito</option>
+                      {distritos.map(d => (
+                        <option key={d.id} value={d.id}>{d.nombre} - {d.provincia}</option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={handleAddAddress}
+                      disabled={savingAddress || !newDireccion || !newDistritoId}
+                      className="w-full bg-primary-600 hover:bg-primary-700 disabled:bg-slate-400 text-white font-semibold py-2 px-4 rounded-md"
+                    >
+                      {savingAddress ? 'Guardando...' : 'Guardar dirección'}
+                    </button>
                   </div>
+                )}
+
+                {direcciones.length === 0 ? (
+                  <p className="text-slate-600">No tienes direcciones registradas</p>
                 ) : (
-                  <p className="text-slate-600">No tienes dirección registrada</p>
+                  <div className="space-y-2">
+                    {direcciones.map(dir => {
+                      const d = distritos.find(x => x.id === dir.distrito_id);
+                      return (
+                        <div key={dir.id} className="p-4 bg-slate-50 rounded-md">
+                          <p className="text-slate-800">{dir.direccion}</p>
+                          <p className="text-sm text-slate-600">
+                            {d ? `${d.nombre} - ${d.provincia}` : ''}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
             )}
