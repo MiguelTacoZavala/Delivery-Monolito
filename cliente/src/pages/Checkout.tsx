@@ -76,6 +76,17 @@ export default function Checkout() {
         if (itemError) throw itemError;
       }
 
+      const { error: stockError } = await supabase.functions.invoke('upadate-stock', {
+        body: {
+          items: items.map(item => ({
+            idProducto: item.product.id,
+            cantidad: item.quantity,
+          })),
+        },
+      });
+
+      if (stockError) throw stockError;
+
       clearCart();
       navigate('/perfil');
     } catch (err) {
