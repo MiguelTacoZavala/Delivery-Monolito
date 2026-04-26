@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 
 export default function Cart() {
+  const { user } = useAuth();
   const { items, removeFromCart, updateQuantity, total } = useCart();
 
   if (items.length === 0) {
@@ -9,7 +11,7 @@ export default function Cart() {
       <div className="min-h-screen bg-slate-50">
         <header className="bg-white shadow-sm">
           <div className="max-w-6xl mx-auto px-4 py-4">
-            <Link to="/" className="text-xl font-bold text-primary-600">
+            <Link to={user ? '/catalogo' : '/'} className="text-xl font-bold text-primary-600">
               FarmalinkDelivery
             </Link>
           </div>
@@ -38,7 +40,7 @@ export default function Cart() {
       <header className="bg-white shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <Link to="/" className="text-xl font-bold text-primary-600">
+            <Link to={user ? '/catalogo' : '/'} className="text-xl font-bold text-primary-600">
               FarmalinkDelivery
             </Link>
             <Link to="/catalogo" className="text-sm text-primary-600 hover:text-primary-700">

@@ -103,7 +103,7 @@ export default function Checkout() {
       <div className="min-h-screen bg-slate-50">
         <header className="bg-white shadow-sm">
           <div className="max-w-6xl mx-auto px-4 py-4">
-            <Link to="/" className="text-xl font-bold text-primary-600">
+            <Link to={user ? '/catalogo' : '/'} className="text-xl font-bold text-primary-600">
               FarmalinkDelivery
             </Link>
           </div>
@@ -128,7 +128,7 @@ export default function Checkout() {
     <div className="min-h-screen bg-slate-50">
       <header className="bg-white shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-4">
-          <Link to="/" className="text-xl font-bold text-primary-600">
+          <Link to={user ? '/catalogo' : '/'} className="text-xl font-bold text-primary-600">
             FarmalinkDelivery
           </Link>
         </div>
