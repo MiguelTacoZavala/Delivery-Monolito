@@ -21,9 +21,16 @@ export default function Catalog() {
   const [category, setCategory] = useState('Todos');
   const [showOnlyStock, setShowOnlyStock] = useState(false);
   const [search, setSearch] = useState('');
+  const [addedId, setAddedId] = useState<number | null>(null);
   const { user } = useAuth();
   const location = useLocation();
-  const { addToCart } = useCart();
+  const { addToCart, itemCount } = useCart();
+
+  const handleAddToCart = (product: Product) => {
+    addToCart(product, 1);
+    setAddedId(product.id);
+    setTimeout(() => setAddedId(null), 1500);
+  };
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -90,10 +97,15 @@ export default function Catalog() {
                   Ingresar
                 </Link>
               )}
-              <Link to="/carrito" className="p-2 text-slate-600 hover:text-primary-600">
+              <Link to="/carrito" className="relative p-2 text-slate-600 hover:text-primary-600">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 8a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
+                {itemCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                    {itemCount > 99 ? '99+' : itemCount}
+                  </span>
+                )}
               </Link>
             </div>
           </div>
@@ -165,10 +177,14 @@ export default function Catalog() {
                     S/ {product.precio.toFixed(2)}
                   </p>
                   <button
-                    onClick={() => addToCart(product, 1)}
-                    className="w-full mt-3 bg-primary-600 hover:bg-primary-700 text-white font-semibold py-2 px-4 rounded-md transition-colors"
+                    onClick={() => handleAddToCart(product)}
+                    className={`w-full mt-3 text-white font-semibold py-2 px-4 rounded-md transition-colors ${
+                      addedId === product.id
+                        ? 'bg-green-500'
+                        : 'bg-primary-600 hover:bg-primary-700'
+                    }`}
                   >
-                    Agregar al carrito
+                    {addedId === product.id ? '¡Agregado! ✓' : 'Agregar al carrito'}
                   </button>
                 </div>
               </div>
