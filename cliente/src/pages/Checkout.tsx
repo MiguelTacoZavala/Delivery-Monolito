@@ -48,13 +48,26 @@ export default function Checkout() {
 
     setLoading(true);
     try {
+      // 1. Descontar stock en MySQL primero; si falla, no se guarda nada
+      const { error: stockError } = await supabase.functions.invoke('upadate-stock', {
+        body: {
+          items: items.map(item => ({
+            idProducto: item.product.id,
+            cantidad: item.quantity,
+          })),
+        },
+      });
+
+      if (stockError) throw stockError;
+
+      // 2. Stock OK → guardar pedido en Supabase
       const { data: pedido, error: pedidoError } = await supabase
         .from('pedidos')
         .insert({
           usuario_id: user!.id,
           direccion_id: selectedDireccion.id,
           total: total,
-          estado: 'pendiente',
+          estado: 'entregado',
         })
         .select()
         .limit(1);
@@ -75,17 +88,6 @@ export default function Checkout() {
 
         if (itemError) throw itemError;
       }
-
-      const { error: stockError } = await supabase.functions.invoke('upadate-stock', {
-        body: {
-          items: items.map(item => ({
-            idProducto: item.product.id,
-            cantidad: item.quantity,
-          })),
-        },
-      });
-
-      if (stockError) throw stockError;
 
       clearCart();
       navigate('/perfil');
