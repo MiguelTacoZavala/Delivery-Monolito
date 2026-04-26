@@ -30,7 +30,9 @@ export default function Catalog() {
       setLoading(true);
       // Los productos vienen del sistema de inventario externo
       // Por ahora, intentamos traer de la tabla productos si existe
-      const { data } = await supabase.from('productos').select('*').order('nombre');
+      const { data, error } = await supabase.functions.invoke('dynamic-task');
+      //if (error) console.error('Error:', error);
+      //else setProducts(data); // Aquí tienes tus productos de MySQL
       
       if (data) {
         let filtered = data;
@@ -40,7 +42,7 @@ export default function Catalog() {
         if (search) {
           const searchLower = search.toLowerCase();
           filtered = filtered.filter((p: any) => 
-            p.nombre?.toLowerCase().includes(searchLower)
+            p.nombre_producto?.toLowerCase().includes(searchLower)
           );
         }
         setProducts(filtered);
@@ -141,15 +143,22 @@ export default function Catalog() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {products.map(product => (
-              <div key={product.id} className="bg-white rounded-lg shadow-sm overflow-hidden">
+              // Corrección 1: idProducto
+              <div key={product.idProducto} className="bg-white rounded-lg shadow-sm overflow-hidden">
                 <div className="h-40 bg-slate-100 flex items-center justify-center">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                 </div>
                 <div className="p-4">
-                  <h3 className="font-semibold text-slate-800 mb-1 line-clamp-2">{product.nombre}</h3>
-                  <p className="text-lg font-bold text-primary-600">S/ {product.precio.toFixed(2)}</p>
+                  {/* Corrección 2: nombre_producto */}
+                  <h3 className="font-semibold text-slate-800 mb-1 line-clamp-2">
+                    {product.nombre_producto}
+                  </h3>
+                  {/* Corrección 3: Precio (con P mayúscula) y validación de número */}
+                  <p className="text-lg font-bold text-primary-600">
+                    S/ {product.Precio ? Number(product.Precio).toFixed(2) : "0.00"}
+                  </p>
                   <button
                     onClick={() => addToCart(product, 1)}
                     className="w-full mt-3 bg-primary-600 hover:bg-primary-700 text-white font-semibold py-2 px-4 rounded-md transition-colors"
