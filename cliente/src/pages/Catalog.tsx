@@ -35,14 +35,22 @@ export default function Catalog() {
       //else setProducts(data); // Aquí tienes tus productos de MySQL
       
       if (data) {
-        let filtered = data;
+        const normalized: Product[] = data.map((p: any) => ({
+          id: p.idProducto,
+          nombre: p.nombre_producto,
+          precio: Number(p.Precio),
+          stock: p.Stock,
+          categoria: p.categoria,
+        }));
+
+        let filtered = normalized;
         if (category !== 'Todos') {
-          filtered = filtered.filter((p: any) => p.categoria === category);
+          filtered = filtered.filter(p => p.categoria === category);
         }
         if (search) {
           const searchLower = search.toLowerCase();
-          filtered = filtered.filter((p: any) => 
-            p.nombre_producto?.toLowerCase().includes(searchLower)
+          filtered = filtered.filter(p =>
+            p.nombre?.toLowerCase().includes(searchLower)
           );
         }
         setProducts(filtered);
@@ -143,21 +151,18 @@ export default function Catalog() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {products.map(product => (
-              // Corrección 1: idProducto
-              <div key={product.idProducto} className="bg-white rounded-lg shadow-sm overflow-hidden">
+              <div key={product.id} className="bg-white rounded-lg shadow-sm overflow-hidden">
                 <div className="h-40 bg-slate-100 flex items-center justify-center">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                 </div>
                 <div className="p-4">
-                  {/* Corrección 2: nombre_producto */}
                   <h3 className="font-semibold text-slate-800 mb-1 line-clamp-2">
-                    {product.nombre_producto}
+                    {product.nombre}
                   </h3>
-                  {/* Corrección 3: Precio (con P mayúscula) y validación de número */}
                   <p className="text-lg font-bold text-primary-600">
-                    S/ {product.Precio ? Number(product.Precio).toFixed(2) : "0.00"}
+                    S/ {product.precio.toFixed(2)}
                   </p>
                   <button
                     onClick={() => addToCart(product, 1)}
