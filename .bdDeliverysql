@@ -1,0 +1,47 @@
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.detalle_pedidos (
+  id integer NOT NULL DEFAULT nextval('detalle_pedidos_id_seq'::regclass),
+  pedido_id integer,
+  producto_id integer,
+  nombre_producto character varying,
+  precio numeric,
+  cantidad integer,
+  subtotal numeric,
+  CONSTRAINT detalle_pedidos_pkey PRIMARY KEY (id),
+  CONSTRAINT detalle_pedidos_pedido_id_fkey FOREIGN KEY (pedido_id) REFERENCES public.pedidos(id)
+);
+CREATE TABLE public.direcciones (
+  id integer NOT NULL DEFAULT nextval('direcciones_id_seq'::regclass),
+  usuario_id uuid,
+  distrito_id integer,
+  direccion text NOT NULL,
+  CONSTRAINT direcciones_pkey PRIMARY KEY (id),
+  CONSTRAINT direcciones_usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES public.usuarios(id),
+  CONSTRAINT direcciones_distrito_id_fkey FOREIGN KEY (distrito_id) REFERENCES public.distritos(id)
+);
+CREATE TABLE public.distritos (
+  id integer NOT NULL DEFAULT nextval('distritos_id_seq'::regclass),
+  nombre character varying NOT NULL,
+  provincia character varying NOT NULL,
+  CONSTRAINT distritos_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.pedidos (
+  id integer NOT NULL DEFAULT nextval('pedidos_id_seq'::regclass),
+  usuario_id uuid,
+  direccion_id integer,
+  total numeric,
+  estado character varying DEFAULT 'pendiente'::character varying,
+  creado_en timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT pedidos_pkey PRIMARY KEY (id),
+  CONSTRAINT pedidos_usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES public.usuarios(id),
+  CONSTRAINT pedidos_direccion_id_fkey FOREIGN KEY (direccion_id) REFERENCES public.direcciones(id)
+);
+CREATE TABLE public.usuarios (
+  id uuid NOT NULL,
+  nombre_completo character varying,
+  telefono character varying,
+  rol character varying DEFAULT 'cliente'::character varying,
+  CONSTRAINT usuarios_pkey PRIMARY KEY (id)
+);

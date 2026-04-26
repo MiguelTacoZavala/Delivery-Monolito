@@ -76,7 +76,7 @@ export default function AdminDashboard() {
       <header className="bg-white shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <Link to="/" className="text-xl font-bold text-primary-600">
+            <Link to="/admin" className="text-xl font-bold text-primary-600">
               FarmalinkDelivery
             </Link>
             <nav className="flex items-center gap-4">

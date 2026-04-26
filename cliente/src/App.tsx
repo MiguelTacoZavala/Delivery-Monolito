@@ -2,8 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 
-import RoleSelection from './pages/RoleSelection';
-import Logout from './pages/Logout';
+import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Catalog from './pages/Catalog';
@@ -12,6 +11,7 @@ import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
+import Logout from './pages/Logout';
 
 export default function App() {
   return (
@@ -19,10 +19,10 @@ export default function App() {
       <AuthProvider>
         <CartProvider>
           <Routes>
-            <Route path="/" element={<RoleSelection />} />
-            <Route path="/logout" element={<Logout />} />
+            <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/registro" element={<Register />} />
+            <Route path="/logout" element={<Logout />} />
             <Route path="/catalogo" element={<Catalog />} />
             <Route path="/producto/:id" element={<ProductDetail />} />
             <Route path="/carrito" element={<Cart />} />

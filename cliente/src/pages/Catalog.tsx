@@ -35,46 +35,46 @@ export default function Catalog() {
   useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true);
-      // Los productos vienen del sistema de inventario externo
-      // Por ahora, intentamos traer de la tabla productos si existe
-      const { data, error } = await supabase.functions.invoke('dynamic-task');
-      //if (error) console.error('Error:', error);
-      //else setProducts(data); // Aquí tienes tus productos de MySQL
-      
-      if (data) {
-        const normalized: Product[] = data.map((p: any) => ({
-          id: p.idProducto,
-          nombre: p.nombre_producto,
-          precio: Number(p.Precio),
-          stock: p.Stock,
-          categoria: p.categoria,
-        }));
-
-        let filtered = normalized;
-        if (category !== 'Todos') {
-          filtered = filtered.filter(p => p.categoria === category);
+      try {
+        const { data, error } = await supabase.functions.invoke('dynamic-task');
+        if (error) {
+          console.error('Error al obtener productos:', error);
+          setProducts([]);
+        } else if (data) {
+          const normalized: Product[] = data.map((p: any) => ({
+            id: p.idProducto,
+            nombre: p.nombre_producto || p.nombre,
+            precio: Number(p.Precio) || Number(p.precio) || 0,
+            descripcion: p.descripcion || p.Descripcion || '',
+            sku: p.sku || '',
+            categoria: p.categoria || p.Categoria || '',
+          }));
+          setProducts(normalized);
         }
-        if (search) {
-          const searchLower = search.toLowerCase();
-          filtered = filtered.filter(p =>
-            p.nombre?.toLowerCase().includes(searchLower)
-          );
-        }
-        setProducts(filtered);
-      } else {
+      } catch (err) {
+        console.error('Error en fetchProducts:', err);
         setProducts([]);
       }
       setLoading(false);
     };
     fetchProducts();
-  }, [category, showOnlyStock, search]);
+  }, []);
+
+  const filteredProducts = products.filter(p => {
+    if (category !== 'Todos' && p.categoria !== category) return false;
+    if (search) {
+      const searchLower = search.toLowerCase();
+      if (!p.nombre?.toLowerCase().includes(searchLower)) return false;
+    }
+    return true;
+  });
 
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="bg-white shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <Link to="/" className="text-xl font-bold text-primary-600">
+            <Link to={user ? '/catalogo' : '/'} className="text-xl font-bold text-primary-600">
               FarmalinkDelivery
             </Link>
             <nav className="flex items-center gap-4">
@@ -156,13 +156,13 @@ export default function Catalog() {
           <div className="text-center py-12">
             <p className="text-slate-500">Cargando productos...</p>
           </div>
-        ) : products.length === 0 ? (
+        ) : filteredProducts.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-slate-500">No hay productos disponibles</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {products.map(product => (
+            {filteredProducts.map(product => (
               <div key={product.id} className="bg-white rounded-lg shadow-sm overflow-hidden">
                 <div className="h-40 bg-slate-100 flex items-center justify-center">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">

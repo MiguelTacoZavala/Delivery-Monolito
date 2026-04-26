@@ -227,7 +227,7 @@ export default function Register() {
 
             <p className="mt-4 text-center text-sm text-slate-600">
               ¿Ya tienes cuenta?{' '}
-              <Link to="/login?role=cliente" className="text-primary-600 hover:text-primary-700 font-medium">
+              <Link to="/" className="text-primary-600 hover:text-primary-700 font-medium">
                 Ingresar
               </Link>
             </p>
