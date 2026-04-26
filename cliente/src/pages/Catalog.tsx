@@ -1,22 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Product } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 
-const CATEGORIES = [
-  'Todos',
-  'Analgésicos',
-  'Antibióticos',
-  'Vitaminas',
-  'Cuidado Personal',
-  'Bebés',
-  'Dermatológicos',
-];
-
 export default function Catalog() {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState('Todos');
   const [showOnlyStock, setShowOnlyStock] = useState(false);
@@ -35,12 +25,7 @@ export default function Catalog() {
   useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true);
-      // Los productos vienen del sistema de inventario externo
-      // Por ahora, intentamos traer de la tabla productos si existe
-      const { data, error } = await supabase.functions.invoke('dynamic-task');
-      //if (error) console.error('Error:', error);
-      //else setProducts(data); // Aquí tienes tus productos de MySQL
-      
+      const { data } = await supabase.functions.invoke('dynamic-task');
       if (data) {
         const normalized: Product[] = data.map((p: any) => ({
           id: p.idProducto,
@@ -49,25 +34,34 @@ export default function Catalog() {
           stock: p.Stock,
           categoria: p.categoria,
         }));
-
-        let filtered = normalized;
-        if (category !== 'Todos') {
-          filtered = filtered.filter(p => p.categoria === category);
-        }
-        if (search) {
-          const searchLower = search.toLowerCase();
-          filtered = filtered.filter(p =>
-            p.nombre?.toLowerCase().includes(searchLower)
-          );
-        }
-        setProducts(filtered);
+        setAllProducts(normalized);
       } else {
-        setProducts([]);
+        setAllProducts([]);
       }
       setLoading(false);
     };
     fetchProducts();
-  }, [category, showOnlyStock, search]);
+  }, []);
+
+  const categories = useMemo(() => {
+    const unique = [...new Set(allProducts.map(p => p.categoria).filter(Boolean))] as string[];
+    return ['Todos', ...unique.sort((a, b) => a.localeCompare(b, 'es'))];
+  }, [allProducts]);
+
+  const products = useMemo(() => {
+    let filtered = allProducts;
+    if (category !== 'Todos') {
+      filtered = filtered.filter(p => p.categoria === category);
+    }
+    if (showOnlyStock) {
+      filtered = filtered.filter(p => p.stock != null && p.stock > 0);
+    }
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filtered = filtered.filter(p => p.nombre?.toLowerCase().includes(searchLower));
+    }
+    return filtered;
+  }, [allProducts, category, showOnlyStock, search]);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -136,7 +130,7 @@ export default function Catalog() {
           </label>
 
           <div className="flex flex-wrap gap-2">
-            {CATEGORIES.map(cat => (
+            {categories.map(cat => (
               <button
                 key={cat}
                 onClick={() => setCategory(cat)}
