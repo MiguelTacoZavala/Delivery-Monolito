@@ -14,9 +14,14 @@ export default function Catalog() {
   const [addedId, setAddedId] = useState<number | null>(null);
   const { user } = useAuth();
   const location = useLocation();
-  const { addToCart, itemCount } = useCart();
+  const { addToCart, itemCount, items } = useCart();
+
+  const getCartQuantity = (productId: number) =>
+    items.find(i => i.product.id === productId)?.quantity ?? 0;
 
   const handleAddToCart = (product: Product) => {
+    const stock = product.stock ?? 0;
+    if (stock <= 0 || getCartQuantity(product.id) >= stock) return;
     addToCart(product, 1);
     setAddedId(product.id);
     setTimeout(() => setAddedId(null), 1500);
@@ -178,15 +183,31 @@ export default function Catalog() {
                   <p className="text-lg font-bold text-primary-600">
                     S/ {product.precio.toFixed(2)}
                   </p>
+                  {product.stock !== undefined && product.stock !== null && (
+                    <p className={`text-xs mt-2 ${product.stock > 0 ? 'text-slate-500' : 'text-red-500 font-medium'}`}>
+                      {product.stock > 0 ? `Stock: ${product.stock}` : 'Sin stock'}
+                    </p>
+                  )}
                   <button
                     onClick={() => handleAddToCart(product)}
+                    disabled={!product.stock || product.stock <= 0 || getCartQuantity(product.id) >= product.stock}
                     className={`w-full mt-3 text-white font-semibold py-2 px-4 rounded-md transition-colors ${
-                      addedId === product.id
+                      !product.stock || product.stock <= 0
+                        ? 'bg-slate-400 cursor-not-allowed'
+                        : getCartQuantity(product.id) >= product.stock
+                        ? 'bg-slate-400 cursor-not-allowed'
+                        : addedId === product.id
                         ? 'bg-green-500'
                         : 'bg-primary-600 hover:bg-primary-700'
                     }`}
                   >
-                    {addedId === product.id ? '¡Agregado! ✓' : 'Agregar al carrito'}
+                    {!product.stock || product.stock <= 0
+                      ? 'Sin stock'
+                      : getCartQuantity(product.id) >= product.stock
+                      ? 'Máximo alcanzado'
+                      : addedId === product.id
+                      ? '¡Agregado! ✓'
+                      : 'Agregar al carrito'}
                   </button>
                 </div>
               </div>

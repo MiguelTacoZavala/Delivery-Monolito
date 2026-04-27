@@ -88,7 +88,12 @@ export default function Cart() {
                       <span className="px-2 py-1 text-slate-800">{item.quantity}</span>
                       <button
                         onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                        className="px-2 py-1 text-slate-600 hover:bg-slate-100"
+                        disabled={item.product.stock !== undefined && item.product.stock !== null && item.quantity >= item.product.stock}
+                        className={`px-2 py-1 ${
+                          item.product.stock !== undefined && item.product.stock !== null && item.quantity >= item.product.stock
+                            ? 'text-slate-300 cursor-not-allowed'
+                            : 'text-slate-600 hover:bg-slate-100'
+                        }`}
                       >
                         +
                       </button>
