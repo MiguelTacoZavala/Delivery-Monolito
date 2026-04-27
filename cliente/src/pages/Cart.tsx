@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { ProductImage } from '../utils/productImages';
 
 export default function Cart() {
   const { user } = useAuth();
@@ -57,11 +58,7 @@ export default function Cart() {
           <div className="divide-y divide-slate-200">
             {items.map(item => (
               <div key={item.product.id} className="p-4 flex gap-4">
-                <div className="w-20 h-20 bg-slate-100 rounded-md flex-shrink-0 flex items-center justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </div>
+                <ProductImage productId={item.product.id} productName={item.product.nombre} size="sm" className="flex-shrink-0" />
                 <div className="flex-1">
                   <div className="flex items-start justify-between">
                     <div>
